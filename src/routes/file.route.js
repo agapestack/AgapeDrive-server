@@ -4,6 +4,12 @@ const fileController = require('../controllers/file.controller')
 
 router.use('', auth.verifyToken)
 
+router.get('/', fileController.getFiles)
+router.get('/:filename', fileController.getFile)
+router.get('/streaming/:filename', fileController.streamFile)
 router.post('/upload', fileController.uploadFile)
+
+
+
 
 module.exports = router
