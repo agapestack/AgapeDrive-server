@@ -4,11 +4,12 @@ const fs = require('fs')
 const path = require('path')
 const { readdir } = require('fs/promises')
 const slugify = require('slugify')
+const { Files } = require('../config/db')
 
 
 module.exports = {
   uploadFile: async (req, res, next) => {
-    const DIR = `${__dirname}/../../uploads/${req.username}`
+    const DIR = `${__dirname}/../../uploads/${req.userInfo.username}`
 
     const storage = multer.diskStorage(
       {
@@ -18,8 +19,11 @@ module.exports = {
         }
       }
     )
+    req.userInfo._id
 
     const upload = multer({ storage: storage}).single( 'file' )
+
+    console.log('uploading...')
 
     const uploadPromise = util.promisify(upload)
 
@@ -27,35 +31,36 @@ module.exports = {
       await uploadPromise(req, res)
 
       if (req.file == undefined) {
-        return res.status(400).send({ message: "Please upload a file!" });
+        return res.status(400).send({ error: true, message: "Please upload a file!" });
       }
 
-      res.status(200).send({ message: "Uploaded the file successfully: " + req.file.originalname })
+      const newFile = new Files({
+        name: slugify(req.file.originalname, '-'),
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+        owner: req.userInfo._id,
+      })
 
-    } catch (error) {
-      res.status(500).json({ error: error.message })
+      newFile.save(function(err) {
+        if(err) return res.status(500).json({ error: true, data: err})
+        return res.status(200).send({ message: "Uploaded the file successfully: " + req.file.originalname })
+      })
+
+    } catch (err) {
+      return res.status(200).json({ error: true, message: err.message, data: err })
     }
   },
 
   getFiles: async (req, res, next) => {
-    const DIR = `${__dirname}/../../uploads/${req.username}`
+    Files.find({ owner: req.userInfo._id }, (err, userFiles) => {
+      if(err) return res.status(500).json({ error: true, data: err })
 
-    try {
-      const fileList = []
-      const files = await readdir(DIR);
-      for(const file of files) {
-        // console.log(file)
-        fileList.push(file)
-      }
-      return res.status(200).json({ files: fileList })
-    } catch (error) {
-      return res.status(500).json({ error: error.message })
-    }
-    return res.sendStatus(500)
+      return res.status(200).json({ data: userFiles, message: "success" })
+    })
   },
 
   getFile: async (req, res, next) => {
-    const DIR = `${__dirname}/../../uploads/${req.username}`
+    const DIR = `${__dirname}/../../uploads/${req.userInfo.username}`
     const filename = req.params.filename
 
     const filePath = DIR + "/" + filename
@@ -68,7 +73,7 @@ module.exports = {
   },
 
   streamFile: async (req, res, next) => {
-    const DIR = `${__dirname}/../../uploads/${req.username}`
+    const DIR = `${__dirname}/../../uploads/${req.userInfo.username}`
     const videoName = req.params.filename
 
     const videoPath = DIR + "/" + videoName

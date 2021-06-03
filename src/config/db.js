@@ -16,10 +16,11 @@ db.once('open', function() {
 
 // import models
 const Users = require('../models/users.models')
+const Files = require('../models/files.models')
 
 module.exports = {
   db,
   Users,
-
+  Files,
 }
 
