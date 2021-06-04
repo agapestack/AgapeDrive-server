@@ -10,7 +10,7 @@ const auth = require('../middlewares/auth')
 //   })
 // })
 router.use('/', userRouter)
-router.use('/:username', auth.verifyToken, fileRouter)
+router.use('/cloud', auth.verifyToken, fileRouter)
 
 
 router.use((err, req, res, next) => {
